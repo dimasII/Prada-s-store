@@ -578,3 +578,232 @@
   font-size: 1rem;
   padding: 0.25rem 0.5rem;
 }
+
+/* === NAVBAR ACTIONS === */
+.navbar-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.btn-nav-link {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: background 0.3s;
+}
+
+.btn-nav-link:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* === PRODUCT CARD ENHANCED === */
+.producto-img-wrap {
+  position: relative;
+}
+
+.producto-marca-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0,0,0,0.7);
+  color: white;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.producto-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.producto-genero {
+  font-size: 1.2rem;
+}
+
+.producto-marca {
+  font-size: 0.8rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.25rem;
+}
+
+.producto-tallas {
+  margin-bottom: 0.75rem;
+}
+
+.producto-tallas label {
+  font-size: 0.85rem;
+  color: #666;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.tallas-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.talla-btn {
+  min-width: 38px;
+  height: 36px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.talla-btn:hover:not(:disabled) {
+  border-color: #e94560;
+  color: #e94560;
+}
+
+.talla-btn.active {
+  background: #1a1a2e;
+  color: white;
+  border-color: #1a1a2e;
+}
+
+.talla-btn.agotado {
+  opacity: 0.3;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.producto-mensaje {
+  font-size: 0.85rem;
+  color: #22c55e;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.btn-agregar-disabled {
+  opacity: 0.6;
+}
+
+/* === CART ITEM TALLA === */
+.carrito-item-talla {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 0.15rem;
+}
+
+/* === CHECKOUT PAGO === */
+.checkout-pago {
+  margin-bottom: 1.5rem;
+}
+
+.checkout-pago h3 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: #1a1a2e;
+}
+
+.mp-badge {
+  background: linear-gradient(135deg, #00b4db, #0083b0);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.btn-pagar-full {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.05rem;
+}
+
+/* === ADMIN TABS === */
+.btn-tab {
+  background: none;
+  border: 1px solid #ddd;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #666;
+}
+
+.btn-tab.active {
+  background: #1a1a2e;
+  color: white;
+  border-color: #1a1a2e;
+}
+
+/* === ADMIN TALLAS === */
+.admin-tallas {
+  margin-bottom: 1rem;
+}
+
+.admin-tallas h4 {
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  color: #1a1a2e;
+}
+
+.admin-talla-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+.admin-talla-row input {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.admin-form-grid select {
+  padding: 0.7rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: white;
+  width: 100%;
+}
+
+/* === ESTADOS PEDIDO === */
+.estado-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.estado-pendiente { background: #fef3c7; color: #92400e; }
+.estado-pagado { background: #d1fae5; color: #065f46; }
+.estado-enviado { background: #dbeafe; color: #1e40af; }
+.estado-entregado { background: #d1fae5; color: #065f46; }
+.estado-cancelado { background: #fee2e2; color: #991b1b; }
+
+/* === PAGO BANNER === */
+.pago-banner {
+  background: #d1fae5;
+  color: #065f46;
+  text-align: center;
+  padding: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}

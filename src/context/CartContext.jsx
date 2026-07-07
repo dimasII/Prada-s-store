@@ -12,32 +12,34 @@ export function CartProvider({ children }) {
     localStorage.setItem('pradas-carrito', JSON.stringify(carrito))
   }, [carrito])
 
-  const agregarAlCarrito = (producto, cantidad = 1) => {
+  const agregarAlCarrito = (producto, talla = '', cantidad = 1) => {
+    if (!talla) return
     setCarrito(prev => {
-      const existente = prev.find(item => item.id === producto.id)
+      const key = `${producto.id}-${talla}`
+      const existente = prev.find(item => item.key === key)
       if (existente) {
         return prev.map(item =>
-          item.id === producto.id
+          item.key === key
             ? { ...item, cantidad: item.cantidad + cantidad }
             : item
         )
       }
-      return [...prev, { ...producto, cantidad }]
+      return [...prev, { ...producto, key, talla, cantidad }]
     })
   }
 
-  const eliminarDelCarrito = (id) => {
-    setCarrito(prev => prev.filter(item => item.id !== id))
+  const eliminarDelCarrito = (key) => {
+    setCarrito(prev => prev.filter(item => item.key !== key))
   }
 
-  const actualizarCantidad = (id, cantidad) => {
+  const actualizarCantidad = (key, cantidad) => {
     if (cantidad <= 0) {
-      eliminarDelCarrito(id)
+      eliminarDelCarrito(key)
       return
     }
     setCarrito(prev =>
       prev.map(item =>
-        item.id === id ? { ...item, cantidad } : item
+        item.key === key ? { ...item, cantidad } : item
       )
     )
   }

@@ -2,62 +2,91 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function AdminDashboard({ onCerrar }) {
+  const [vista, setVista] = useState('productos')
   const [productos, setProductos] = useState([])
+  const [marcas, setMarcas] = useState([])
+  const [categorias, setCategorias] = useState([])
   const [editando, setEditando] = useState(null)
-  const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', stock: '', imagen_url: '', categoria_id: '' })
+  const [form, setForm] = useState({
+    nombre: '', descripcion: '', precio: '', imagen_url: '',
+    genero: 'unisex', marca_id: '', categoria_id: '',
+  })
+  const [tallasForm, setTallasForm] = useState([])
   const [subiendo, setSubiendo] = useState(false)
+  const [nuevaMarca, setNuevaMarca] = useState('')
 
   useEffect(() => {
     cargarProductos()
+    cargarMarcas()
+    cargarCategorias()
   }, [])
 
   const cargarProductos = async () => {
-    const { data } = await supabase.from('productos').select('*').order('id', { ascending: false })
+    const { data } = await supabase.from('productos').select('*, marcas(nombre)').order('id', { ascending: false })
     if (data) setProductos(data)
   }
 
-  const handleEdit = (producto) => {
+  const cargarMarcas = async () => {
+    const { data } = await supabase.from('marcas').select('*').order('nombre')
+    if (data) setMarcas(data)
+  }
+
+  const cargarCategorias = async () => {
+    const { data } = await supabase.from('categorias').select('*').order('nombre')
+    if (data) setCategorias(data)
+  }
+
+  const cargarTallas = async (productoId) => {
+    const { data } = await supabase.from('producto_tallas').select('*').eq('producto_id', productoId).order('talla')
+    if (data) setTallasForm(data)
+  }
+
+  const handleEdit = async (producto) => {
     setEditando(producto.id)
     setForm({
       nombre: producto.nombre,
       descripcion: producto.descripcion || '',
       precio: producto.precio,
-      stock: producto.stock,
       imagen_url: producto.imagen_url || '',
+      genero: producto.genero || 'unisex',
+      marca_id: producto.marca_id || '',
       categoria_id: producto.categoria_id || '',
     })
+    await cargarTallas(producto.id)
   }
 
   const handleNuevo = () => {
     setEditando('nuevo')
-    setForm({ nombre: '', descripcion: '', precio: '', stock: '0', imagen_url: '', categoria_id: '' })
+    setForm({ nombre: '', descripcion: '', precio: '', imagen_url: '', genero: 'unisex', marca_id: '', categoria_id: '' })
+    setTallasForm([{ talla: '', stock: 0 }])
   }
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-
     setSubiendo(true)
     const fileExt = file.name.split('.').pop()
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
     const filePath = `productos/${fileName}`
-
-    const { error: uploadError } = await supabase.storage
-      .from('productos')
-      .upload(filePath, file)
-
-    if (uploadError) {
-      alert('Error al subir imagen: ' + uploadError.message)
-      setSubiendo(false)
-      return
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('productos')
-      .getPublicUrl(filePath)
-
+    const { error: uploadError } = await supabase.storage.from('productos').upload(filePath, file)
+    if (uploadError) { alert('Error al subir imagen: ' + uploadError.message); setSubiendo(false); return }
+    const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(filePath)
     setForm(prev => ({ ...prev, imagen_url: publicUrl }))
     setSubiendo(false)
+  }
+
+  const agregarTalla = () => {
+    setTallasForm([...tallasForm, { talla: '', stock: 0 }])
+  }
+
+  const actualizarTalla = (index, campo, valor) => {
+    const nuevas = [...tallasForm]
+    nuevas[index] = { ...nuevas[index], [campo]: valor }
+    setTallasForm(nuevas)
+  }
+
+  const eliminarTalla = (index) => {
+    setTallasForm(tallasForm.filter((_, i) => i !== index))
   }
 
   const handleSave = async (e) => {
@@ -66,17 +95,33 @@ export default function AdminDashboard({ onCerrar }) {
       nombre: form.nombre,
       descripcion: form.descripcion,
       precio: parseFloat(form.precio),
-      stock: parseInt(form.stock),
       imagen_url: form.imagen_url || null,
+      genero: form.genero,
+      marca_id: form.marca_id ? parseInt(form.marca_id) : null,
       categoria_id: form.categoria_id ? parseInt(form.categoria_id) : null,
     }
 
     if (editando === 'nuevo') {
-      const { error } = await supabase.from('productos').insert(payload)
+      const { data: prod, error } = await supabase.from('productos').insert(payload).select().single()
       if (error) { alert('Error: ' + error.message); return }
+
+      const tallasValidas = tallasForm.filter(t => t.talla.trim())
+      if (tallasValidas.length > 0) {
+        await supabase.from('producto_tallas').insert(
+          tallasValidas.map(t => ({ producto_id: prod.id, talla: t.talla, stock: parseInt(t.stock) || 0 }))
+        )
+      }
     } else {
       const { error } = await supabase.from('productos').update(payload).eq('id', editando)
       if (error) { alert('Error: ' + error.message); return }
+
+      await supabase.from('producto_tallas').delete().eq('producto_id', editando)
+      const tallasValidas = tallasForm.filter(t => t.talla.trim())
+      if (tallasValidas.length > 0) {
+        await supabase.from('producto_tallas').insert(
+          tallasValidas.map(t => ({ producto_id: editando, talla: t.talla, stock: parseInt(t.stock) || 0 }))
+        )
+      }
     }
 
     setEditando(null)
@@ -84,85 +129,154 @@ export default function AdminDashboard({ onCerrar }) {
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar este producto?')) return
+    if (!confirm('¿Desactivar este producto?')) return
     const { error } = await supabase.from('productos').update({ activo: false }).eq('id', id)
     if (error) { alert('Error: ' + error.message); return }
     cargarProductos()
+  }
+
+  const agregarMarca = async () => {
+    if (!nuevaMarca.trim()) return
+    const slug = nuevaMarca.toLowerCase().replace(/\s+/g, '-')
+    const { error } = await supabase.from('marcas').insert({ nombre: nuevaMarca.trim(), slug })
+    if (error) { alert('Error: ' + error.message); return }
+    setNuevaMarca('')
+    cargarMarcas()
   }
 
   return (
     <div className="modal-overlay" onClick={onCerrar}>
       <div className="modal-content modal-admin" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Administrar Productos</h2>
-          <button className="modal-cerrar" onClick={onCerrar}>✕</button>
+          <h2>Administración</h2>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className={`btn-tab ${vista === 'productos' ? 'active' : ''}`} onClick={() => setVista('productos')}>Productos</button>
+            <button className={`btn-tab ${vista === 'marcas' ? 'active' : ''}`} onClick={() => setVista('marcas')}>Marcas</button>
+            <button className="modal-cerrar" onClick={onCerrar}>✕</button>
+          </div>
         </div>
 
-        <div className="admin-toolbar">
-          <button className="btn-primary" onClick={handleNuevo}>+ Nuevo Producto</button>
-        </div>
-
-        {editando && (
-          <form onSubmit={handleSave} className="admin-form">
-            <h3>{editando === 'nuevo' ? 'Nuevo Producto' : 'Editar Producto'}</h3>
-            <input placeholder="Nombre" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required />
-            <textarea placeholder="Descripción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} />
-            <div className="admin-form-grid">
-              <input type="number" step="0.01" placeholder="Precio" value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })} required />
-              <input type="number" placeholder="Stock" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} required />
+        {vista === 'marcas' && (
+          <div style={{ padding: '2rem' }}>
+            <h3 style={{ marginBottom: '1rem' }}>Gestionar Marcas</h3>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              <input type="text" placeholder="Nueva marca" value={nuevaMarca} onChange={e => setNuevaMarca(e.target.value)}
+                style={{ flex: 1, padding: '0.7rem', border: '1px solid #ddd', borderRadius: 6, fontSize: '0.9rem' }} />
+              <button className="btn-primary" onClick={agregarMarca}>Agregar</button>
             </div>
-            <div className="admin-upload">
-              <input type="file" accept="image/*" onChange={handleImageUpload} disabled={subiendo} />
-              {subiendo && <span>Subiendo imagen...</span>}
-              {form.imagen_url && (
-                <img src={form.imagen_url} alt="Preview" className="admin-preview" />
-              )}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              {marcas.map(m => (
+                <span key={m.id} style={{ padding: '0.4rem 0.8rem', background: '#f0f0f0', borderRadius: 20, fontSize: '0.85rem' }}>
+                  {m.nombre}
+                </span>
+              ))}
             </div>
-            <div className="admin-form-actions">
-              <button type="submit" className="btn-primary" disabled={subiendo}>
-                {editando === 'nuevo' ? 'Crear Producto' : 'Guardar Cambios'}
-              </button>
-              <button type="button" className="btn-vaciar" onClick={() => setEditando(null)}>Cancelar</button>
-            </div>
-          </form>
+          </div>
         )}
 
-        <div className="admin-lista">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Imagen</th>
-                <th>Nombre</th>
-                <th>Precio</th>
-                <th>Stock</th>
-                <th>Activo</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {productos.map(p => (
-                <tr key={p.id}>
-                  <td>{p.id}</td>
-                  <td>
-                    {p.imagen_url && (
-                      <img src={p.imagen_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} />
-                    )}
-                  </td>
-                  <td>{p.nombre}</td>
-                  <td>${Number(p.precio).toFixed(2)}</td>
-                  <td>{p.stock}</td>
-                  <td>{p.activo ? '✅' : '❌'}</td>
-                  <td>
-                    <button className="btn-small" onClick={() => handleEdit(p)}>✏️</button>
-                    <button className="btn-small" onClick={() => handleDelete(p.id)}>🗑️</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {vista === 'productos' && (
+          <>
+            <div className="admin-toolbar">
+              <button className="btn-primary" onClick={handleNuevo}>+ Nuevo Producto</button>
+            </div>
+
+            {editando && (
+              <form onSubmit={handleSave} className="admin-form">
+                <h3>{editando === 'nuevo' ? 'Nuevo Producto' : 'Editar Producto'}</h3>
+                <input placeholder="Nombre" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required />
+                <textarea placeholder="Descripción" value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} />
+
+                <div className="admin-form-grid">
+                  <input type="number" step="0.01" placeholder="Precio" value={form.precio} onChange={e => setForm({ ...form, precio: e.target.value })} required />
+                  <select value={form.genero} onChange={e => setForm({ ...form, genero: e.target.value })} style={selectStyle}>
+                    <option value="unisex">Unisex</option>
+                    <option value="varon">Varón</option>
+                    <option value="mujer">Mujer</option>
+                  </select>
+                </div>
+
+                <div className="admin-form-grid">
+                  <select value={form.marca_id} onChange={e => setForm({ ...form, marca_id: e.target.value })} style={selectStyle}>
+                    <option value="">Sin marca</option>
+                    {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                  </select>
+                  <select value={form.categoria_id} onChange={e => setForm({ ...form, categoria_id: e.target.value })} style={selectStyle}>
+                    <option value="">Sin categoría</option>
+                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </select>
+                </div>
+
+                <div className="admin-upload">
+                  <input type="file" accept="image/*" onChange={handleImageUpload} disabled={subiendo} />
+                  {subiendo && <span>Subiendo imagen...</span>}
+                  {form.imagen_url && <img src={form.imagen_url} alt="Preview" className="admin-preview" />}
+                </div>
+
+                <div className="admin-tallas">
+                  <h4>Tallas y Stock</h4>
+                  {tallasForm.map((t, i) => (
+                    <div key={i} className="admin-talla-row">
+                      <input type="text" placeholder="Talla (38, S, M...)" value={t.talla}
+                        onChange={e => actualizarTalla(i, 'talla', e.target.value)} style={{ flex: 1 }} />
+                      <input type="number" placeholder="Stock" value={t.stock}
+                        onChange={e => actualizarTalla(i, 'stock', e.target.value)} style={{ width: 80 }} />
+                      <button type="button" className="btn-small" onClick={() => eliminarTalla(i)}>🗑️</button>
+                    </div>
+                  ))}
+                  <button type="button" className="btn-vaciar" onClick={agregarTalla} style={{ marginTop: '0.5rem' }}>
+                    + Agregar talla
+                  </button>
+                </div>
+
+                <div className="admin-form-actions">
+                  <button type="submit" className="btn-primary" disabled={subiendo}>
+                    {editando === 'nuevo' ? 'Crear Producto' : 'Guardar Cambios'}
+                  </button>
+                  <button type="button" className="btn-vaciar" onClick={() => setEditando(null)}>Cancelar</button>
+                </div>
+              </form>
+            )}
+
+            <div className="admin-lista">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Imagen</th>
+                    <th>Nombre</th>
+                    <th>Marca</th>
+                    <th>Género</th>
+                    <th>Precio</th>
+                    <th>Activo</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productos.map(p => (
+                    <tr key={p.id}>
+                      <td>{p.id}</td>
+                      <td>{p.imagen_url && <img src={p.imagen_url} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} />}</td>
+                      <td>{p.nombre}</td>
+                      <td>{p.marcas?.nombre || '-'}</td>
+                      <td>{p.genero}</td>
+                      <td>${Number(p.precio).toFixed(2)}</td>
+                      <td>{p.activo ? '✅' : '❌'}</td>
+                      <td>
+                        <button className="btn-small" onClick={() => handleEdit(p)}>✏️</button>
+                        <button className="btn-small" onClick={() => handleDelete(p.id)}>🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
+}
+
+const selectStyle = {
+  padding: '0.7rem', border: '1px solid #ddd', borderRadius: 6, fontSize: '0.9rem', fontFamily: 'inherit', background: 'white',
 }

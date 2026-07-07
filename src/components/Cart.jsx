@@ -1,8 +1,9 @@
 import { useCart } from '../context/CartContext'
-import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 
 export default function Cart({ onCerrar, onCheckout }) {
   const { carrito, eliminarDelCarrito, actualizarCantidad, total, vaciarCarrito } = useCart()
+  const { user } = useAuth()
 
   if (carrito.length === 0) {
     return (
@@ -30,7 +31,7 @@ export default function Cart({ onCerrar, onCheckout }) {
 
         <div className="carrito-items">
           {carrito.map(item => (
-            <div key={item.id} className="carrito-item">
+            <div key={item.key} className="carrito-item">
               <img
                 src={item.imagen_url || `https://placehold.co/80x80/e2e8f0/64748b?text=${encodeURIComponent(item.nombre)}`}
                 alt={item.nombre}
@@ -38,14 +39,15 @@ export default function Cart({ onCerrar, onCheckout }) {
               />
               <div className="carrito-item-info">
                 <h4>{item.nombre}</h4>
+                <p className="carrito-item-talla">Talla: {item.talla}</p>
                 <p>${Number(item.precio).toFixed(2)}</p>
               </div>
               <div className="carrito-item-cantidad">
-                <button onClick={() => actualizarCantidad(item.id, item.cantidad - 1)}>-</button>
+                <button onClick={() => actualizarCantidad(item.key, item.cantidad - 1)}>-</button>
                 <span>{item.cantidad}</span>
-                <button onClick={() => actualizarCantidad(item.id, item.cantidad + 1)}>+</button>
+                <button onClick={() => actualizarCantidad(item.key, item.cantidad + 1)}>+</button>
               </div>
-              <button className="carrito-item-eliminar" onClick={() => eliminarDelCarrito(item.id)}>
+              <button className="carrito-item-eliminar" onClick={() => eliminarDelCarrito(item.key)}>
                 🗑️
               </button>
             </div>
@@ -59,7 +61,15 @@ export default function Cart({ onCerrar, onCheckout }) {
           </div>
           <div className="carrito-acciones">
             <button className="btn-vaciar" onClick={vaciarCarrito}>Vaciar carrito</button>
-            <button className="btn-pagar" onClick={onCheckout}>Proceder al pago</button>
+            <button className="btn-pagar" onClick={() => {
+              if (!user) {
+                alert('Debes iniciar sesión para comprar')
+                return
+              }
+              onCheckout()
+            }}>
+              Proceder al pago
+            </button>
           </div>
         </div>
       </div>
