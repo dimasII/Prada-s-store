@@ -15,11 +15,16 @@ export default function Navbar({ onVerCarrito, onAdminClick, onMiCuenta }) {
           <a href="#contacto">Contacto</a>
         </nav>
         <div className="navbar-actions">
-          <button className="btn-nav-link" onClick={onMiCuenta} title="Mi cuenta">
-            👤 {perfil ? perfil.nombre?.split(' ')[0] : (user ? 'Cuenta' : 'Ingresar')}
-          </button>
+          {user ? (
+            <button className={`btn-nav-link ${esAdmin ? 'btn-admin' : ''}`} onClick={onMiCuenta}>
+              👤 {perfil?.nombre?.split(' ')[0] || user.email?.split('@')[0] || 'Cuenta'}
+              {esAdmin ? ' 👑' : ' 🛒'}
+            </button>
+          ) : (
+            <button className="btn-nav-link" onClick={onMiCuenta}>👤 Ingresar</button>
+          )}
           {esAdmin && (
-            <button onClick={onAdminClick} className="btn-nav-link" title="Admin">
+            <button onClick={onAdminClick} className="btn-nav-link btn-admin-icon" title="Panel Admin">
               ⚙️
             </button>
           )}

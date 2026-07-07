@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 
 export default function CustomerAuth({ onCerrar, onLoginExitoso }) {
-  const { login, registrar } = useAuth()
+  const { login, registrar, loginConGoogle } = useAuth()
   const [modo, setModo] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -71,6 +71,17 @@ export default function CustomerAuth({ onCerrar, onLoginExitoso }) {
         ) : (
           <form onSubmit={modo === 'login' ? handleLogin : handleRegistro} style={{ padding: '2rem' }}>
             {error && <p style={{ color: '#e94560', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</p>}
+
+            {modo === 'login' && (
+              <>
+                <button type="button" className="btn-google" onClick={async () => {
+                  try { await loginConGoogle() } catch { setError('Error al conectar con Google') }
+                }}>
+                  <span className="google-icon">G</span> Continuar con Google
+                </button>
+                <div className="divider"><span>o</span></div>
+              </>
+            )}
 
             <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required
               style={inputStyle} />

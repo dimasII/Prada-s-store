@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
       if (session?.user) {
         Promise.all([
           verificarAdmin(session.user.id),
-          cargarPerfil(session.user.id),
+          cargarOCrearPerfil(session.user),
         ]).finally(() => setCargando(false))
       } else {
         setCargando(false)
@@ -24,7 +24,12 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null)
-      if (!session?.user) {
+      if (session?.user) {
+        await Promise.all([
+          verificarAdmin(session.user.id),
+          cargarOCrearPerfil(session.user),
+        ])
+      } else {
         setEsAdmin(false)
         setPerfil(null)
         setCargando(false)
@@ -43,25 +48,45 @@ export function AuthProvider({ children }) {
     setEsAdmin(!!data)
   }
 
-  const cargarPerfil = async (userId) => {
-    const { data } = await supabase
+  const cargarOCrearPerfil = async (userData) => {
+    const { data: existente } = await supabase
       .from('clientes')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userData.id)
       .maybeSingle()
-    setPerfil(data)
+
+    if (existente) {
+      setPerfil(existente)
+      return
+    }
+
+    const metaNombre = userData.user_metadata?.full_name || userData.user_metadata?.name || ''
+    const { data: nuevo } = await supabase
+      .from('clientes')
+      .insert({
+        user_id: userData.id,
+        email: userData.email,
+        nombre: metaNombre || userData.email?.split('@')[0] || 'Usuario',
+      })
+      .select()
+      .single()
+
+    if (nuevo) setPerfil(nuevo)
   }
 
   const login = async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
-    const { data: { user: u } } = await supabase.auth.getUser()
-    if (u) {
-      await Promise.all([
-        verificarAdmin(u.id),
-        cargarPerfil(u.id),
-      ])
-    }
+  }
+
+  const loginConGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    })
+    if (error) throw error
   }
 
   const registrar = async (email, password, datos) => {
@@ -78,7 +103,6 @@ export function AuthProvider({ children }) {
         codigo_postal: datos.codigo_postal || '',
       })
       if (errPerfil) throw errPerfil
-      await cargarPerfil(data.user.id)
     }
   }
 
@@ -88,7 +112,7 @@ export function AuthProvider({ children }) {
       .update(datos)
       .eq('user_id', user.id)
     if (error) throw error
-    await cargarPerfil(user.id)
+    await cargarOCrearPerfil(user)
   }
 
   const logout = async () => {
@@ -100,7 +124,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, esAdmin, perfil, cargando,
-      login, registrar, logout, actualizarPerfil,
+      login, loginConGoogle, registrar, logout, actualizarPerfil,
     }}>
       {children}
     </AuthContext.Provider>
