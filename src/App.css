@@ -991,3 +991,369 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* === USER MENU DROPDOWN === */
+.user-menu {
+  position: relative;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  min-width: 220px;
+  z-index: 200;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.user-dropdown .dropdown-header {
+  padding: 0.75rem 1rem;
+  background: #f9f9f9;
+  border-bottom: 1px solid #eee;
+}
+
+.user-dropdown .dropdown-header strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #1a1a2e;
+}
+
+.user-dropdown .dropdown-header small {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.dropdown-badge {
+  display: inline-block;
+  background: #e94560;
+  color: white;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 8px;
+  margin-top: 0.25rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.user-dropdown button {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: #333;
+  transition: background 0.2s;
+}
+
+.user-dropdown button:hover {
+  background: #f5f5f5;
+}
+
+.user-dropdown hr {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 0;
+}
+
+.dropdown-danger {
+  color: #e94560 !important;
+}
+
+/* === NOTIFICACIONES === */
+.notif-bell {
+  position: relative;
+}
+
+.notif-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #e94560;
+  color: white;
+  font-size: 0.65rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.notif-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 200;
+  margin-top: 0.5rem;
+}
+
+.notif-dropdown .dropdown-header {
+  padding: 0.75rem 1rem;
+  background: #f9f9f9;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+.notif-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.notif-item:hover {
+  background: #fafafa;
+}
+
+.notif-item.no-leida {
+  background: #fef3f5;
+}
+
+.notif-item-titulo {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.notif-item-msg {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.15rem;
+}
+
+.notif-item-fecha {
+  font-size: 0.7rem;
+  color: #aaa;
+  margin-top: 0.15rem;
+}
+
+/* === SEARCH BAR === */
+.search-bar {
+  position: relative;
+}
+
+.search-form {
+  display: flex;
+  align-items: center;
+}
+
+.search-form input {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px 0 0 6px;
+  background: rgba(255,255,255,0.1);
+  color: white;
+  font-size: 0.85rem;
+  font-family: inherit;
+  width: 200px;
+  outline: none;
+}
+
+.search-form input::placeholder {
+  color: rgba(255,255,255,0.5);
+}
+
+.search-submit {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  background: rgba(255,255,255,0.1);
+  color: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.search-submit:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* === HERO SECCIONES (home) === */
+.hero-secciones {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.secciones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.seccion-card {
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.seccion-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.seccion-img-wrap {
+  position: relative;
+  aspect-ratio: 3/2;
+  overflow: hidden;
+}
+
+.seccion-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s;
+}
+
+.seccion-card:hover .seccion-img-wrap img {
+  transform: scale(1.05);
+}
+
+.seccion-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.5rem;
+  color: white;
+}
+
+.seccion-overlay h3 {
+  font-size: 1.3rem;
+  margin-bottom: 0.3rem;
+}
+
+.seccion-overlay p {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin-bottom: 0.75rem;
+}
+
+.seccion-btn {
+  display: inline-block;
+  padding: 0.4rem 1rem;
+  background: #e94560;
+  color: white;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  align-self: flex-start;
+  transition: background 0.3s;
+}
+
+.seccion-card:hover .seccion-btn {
+  background: #d63851;
+}
+
+/* === FILTRO BARRA === */
+.filtro-barra {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.5rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.btn-clear-filtro {
+  background: none;
+  border: 1px solid #ddd;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #888;
+  font-family: inherit;
+}
+
+.btn-clear-filtro:hover {
+  background: #f5f5f5;
+}
+
+/* === FAVORITOS BTN === */
+.fav-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255,255,255,0.9);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+  z-index: 5;
+}
+
+.fav-btn:hover {
+  transform: scale(1.15);
+}
+
+.fav-btn.active {
+  background: white;
+}
+
+/* === ADMIN SECCIONES === */
+.secciones-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.seccion-admin-card {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.seccion-admin-card img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+
+.seccion-admin-info {
+  padding: 0.5rem 0.75rem;
+}
+
+.seccion-admin-info strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #1a1a2e;
+}
+
+.seccion-admin-info small {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.seccion-admin-acciones {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem 0.5rem;
+}

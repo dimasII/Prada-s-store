@@ -100,7 +100,38 @@ CREATE TABLE pagos (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 9. TABLA DE ADMINS
+-- 9. TABLA DE FAVORITOS
+CREATE TABLE favoritos (
+  id BIGSERIAL PRIMARY KEY,
+  cliente_id BIGINT NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  producto_id BIGINT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(cliente_id, producto_id)
+);
+
+-- 10. TABLA DE NOTIFICACIONES
+CREATE TABLE notificaciones (
+  id BIGSERIAL PRIMARY KEY,
+  cliente_id BIGINT NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  titulo TEXT NOT NULL,
+  mensaje TEXT,
+  leida BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 11. TABLA DE SECCIONES DEL HERO (homepage)
+CREATE TABLE secciones (
+  id BIGSERIAL PRIMARY KEY,
+  titulo TEXT NOT NULL,
+  subtitulo TEXT,
+  imagen_url TEXT,
+  slug TEXT NOT NULL UNIQUE,
+  orden INT DEFAULT 0,
+  activo BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. TABLA DE ADMINS
 CREATE TABLE admins (
   id BIGSERIAL PRIMARY KEY,
   user_id UUID UNIQUE NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -118,6 +149,12 @@ CREATE INDEX idx_producto_imagenes_producto ON producto_imagenes(producto_id);
 CREATE INDEX idx_pedidos_cliente ON pedidos(cliente_id);
 CREATE INDEX idx_pedidos_estado ON pedidos(estado);
 CREATE INDEX idx_pagos_pedido ON pagos(pedido_id);
+CREATE INDEX idx_favoritos_cliente ON favoritos(cliente_id);
+CREATE INDEX idx_favoritos_producto ON favoritos(producto_id);
+CREATE INDEX idx_notificaciones_cliente ON notificaciones(cliente_id);
+CREATE INDEX idx_notificaciones_leida ON notificaciones(cliente_id, leida);
+CREATE INDEX idx_secciones_activo ON secciones(activo);
+CREATE INDEX idx_secciones_orden ON secciones(orden);
 CREATE INDEX idx_admins_user_id ON admins(user_id);
 CREATE INDEX idx_clientes_user_id ON clientes(user_id);
 
@@ -142,6 +179,9 @@ ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pedidos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pedido_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pagos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE favoritos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notificaciones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE secciones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
 
 -- MARCAS: todos ven, solo admins modifican
@@ -210,6 +250,32 @@ CREATE POLICY "Pagos INSERT" ON pagos FOR INSERT WITH CHECK (
 );
 CREATE POLICY "Pagos UPDATE admin" ON pagos FOR UPDATE USING (es_admin());
 
+-- FAVORITOS: cada cliente ve y gestiona sus propios favoritos
+CREATE POLICY "Favoritos SELECT propio" ON favoritos FOR SELECT USING (
+  cliente_id IN (SELECT id FROM clientes WHERE user_id = auth.uid())
+);
+CREATE POLICY "Favoritos INSERT propio" ON favoritos FOR INSERT WITH CHECK (
+  cliente_id IN (SELECT id FROM clientes WHERE user_id = auth.uid())
+);
+CREATE POLICY "Favoritos DELETE propio" ON favoritos FOR DELETE USING (
+  cliente_id IN (SELECT id FROM clientes WHERE user_id = auth.uid())
+);
+
+-- NOTIFICACIONES: cada cliente ve las suyas, admins crean
+CREATE POLICY "Notificaciones SELECT propio" ON notificaciones FOR SELECT USING (
+  cliente_id IN (SELECT id FROM clientes WHERE user_id = auth.uid()) OR es_admin()
+);
+CREATE POLICY "Notificaciones INSERT admin" ON notificaciones FOR INSERT WITH CHECK (es_admin());
+CREATE POLICY "Notificaciones UPDATE propio" ON notificaciones FOR UPDATE USING (
+  cliente_id IN (SELECT id FROM clientes WHERE user_id = auth.uid())
+);
+
+-- SECCIONES: todos ven activas, solo admins modifican
+CREATE POLICY "Secciones SELECT publico" ON secciones FOR SELECT USING (activo = true OR es_admin());
+CREATE POLICY "Secciones INSERT admin" ON secciones FOR INSERT WITH CHECK (es_admin());
+CREATE POLICY "Secciones UPDATE admin" ON secciones FOR UPDATE USING (es_admin());
+CREATE POLICY "Secciones DELETE admin" ON secciones FOR DELETE USING (es_admin());
+
 -- ADMINS: solo admins
 CREATE POLICY "Admins SELECT" ON admins FOR SELECT USING (es_admin());
 
@@ -239,3 +305,7 @@ INSERT INTO producto_tallas (producto_id, talla, stock) VALUES
   (2, '36', 5), (2, '37', 8), (2, '38', 12), (2, '39', 15), (2, '40', 10),
   (3, '35', 8), (3, '36', 12), (3, '37', 15), (3, '38', 10),
   (4, '38', 15), (4, '39', 20), (4, '40', 18), (4, '41', 10), (4, '42', 5);
+
+INSERT INTO secciones (titulo, subtitulo, slug, orden) VALUES
+  ('Zapatillas de Hombre', 'Colección deportiva y casual para ellos', 'zapatillas-hombre', 1),
+  ('Zapatillas de Mujer', 'Estilo y comodidad para ellas', 'zapatillas-mujer', 2);

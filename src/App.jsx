@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { FavoritosProvider } from './context/FavoritosContext'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
+import HeroSecciones from './components/HeroSecciones'
 import ProductCard from './components/ProductCard'
 import Footer from './components/Footer'
 import Cart from './components/Cart'
@@ -15,8 +17,9 @@ import AdminDashboard from './admin/AdminDashboard'
 import './App.css'
 
 function AppContent() {
-  const { user, esAdmin, cargando } = useAuth()
+  const { user, esAdmin, cargando, logout } = useAuth()
   const [productos, setProductos] = useState([])
+  const [productosFiltrados, setProductosFiltrados] = useState([])
   const [tallas, setTallas] = useState({})
   const [imagenes, setImagenes] = useState({})
   const [cargandoProductos, setCargandoProductos] = useState(true)
@@ -30,10 +33,11 @@ function AppContent() {
   const [verPedidos, setVerPedidos] = useState(false)
   const [misPedidos, setMisPedidos] = useState([])
   const [pagoInfo, setPagoInfo] = useState(null)
+  const [filtroGenero, setFiltroGenero] = useState(null)
+  const [busqueda, setBusqueda] = useState('')
 
   useEffect(() => {
     cargarProductos()
-    // Check for payment redirect
     const params = new URLSearchParams(window.location.search)
     const pedidoId = params.get('pedido_id')
     const status = window.location.pathname
@@ -45,6 +49,22 @@ function AppContent() {
       window.history.replaceState({}, '', '/')
     }
   }, [])
+
+  useEffect(() => {
+    let filtrados = [...productos]
+    if (filtroGenero) {
+      filtrados = filtrados.filter(p => p.genero === filtroGenero)
+    }
+    if (busqueda) {
+      const q = busqueda.toLowerCase()
+      filtrados = filtrados.filter(p =>
+        p.nombre.toLowerCase().includes(q) ||
+        p.marcas?.nombre?.toLowerCase().includes(q) ||
+        p.descripcion?.toLowerCase().includes(q)
+      )
+    }
+    setProductosFiltrados(filtrados)
+  }, [productos, filtroGenero, busqueda])
 
   const cargarProductos = async () => {
     setCargandoProductos(true)
@@ -66,9 +86,7 @@ function AppContent() {
       .select('*')
       .eq('producto_id', productoId)
       .order('talla')
-    if (data) {
-      setTallas(prev => ({ ...prev, [productoId]: data }))
-    }
+    if (data) setTallas(prev => ({ ...prev, [productoId]: data }))
   }
 
   const cargarImagenes = async (productoId) => {
@@ -77,17 +95,12 @@ function AppContent() {
       .select('*')
       .eq('producto_id', productoId)
       .order('orden')
-    if (data) {
-      setImagenes(prev => ({ ...prev, [productoId]: data }))
-    }
+    if (data) setImagenes(prev => ({ ...prev, [productoId]: data }))
   }
 
   const handleMiCuenta = () => {
-    if (user) {
-      setVerPerfil(true)
-    } else {
-      setVerCustomerAuth(true)
-    }
+    if (user) setVerPerfil(true)
+    else setVerCustomerAuth(true)
   }
 
   const cargarPedidos = async () => {
@@ -100,35 +113,76 @@ function AppContent() {
     if (data) setMisPedidos(data)
   }
 
+  const handleEliminarCuenta = async () => {
+    if (!confirm('¿Estás seguro? Se eliminarán todos tus datos.')) return
+    if (!confirm('Esta acción no se puede deshacer. ¿Continuar?')) return
+    try {
+      await supabase.auth.admin.deleteUser(user.id)
+    } catch {
+      alert('No se pudo eliminar la cuenta. Contacta al administrador.')
+    }
+  }
+
+  const handleSeccionClick = (slug) => {
+    if (slug.includes('mujer')) setFiltroGenero('mujer')
+    else if (slug.includes('hombre') || slug.includes('varon')) setFiltroGenero('varon')
+    else setFiltroGenero(null)
+    document.getElementById('productos')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  if (cargando) {
+    return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Cargando...</div>
+  }
+
   return (
     <div className="app">
       <Navbar
         onVerCarrito={() => setVerCarrito(true)}
         onAdminClick={() => user && esAdmin ? setVerAdmin(true) : setVerAdminLogin(true)}
-        onMiCuenta={handleMiCuenta}
+        onVerPerfil={handleMiCuenta}
+        onVerPedidos={() => { cargarPedidos(); setVerPedidos(true); setVerPerfil(false) }}
+        onCerrarSesion={logout}
+        onEliminarCuenta={handleEliminarCuenta}
+        onSearch={(q) => setBusqueda(q)}
       />
 
-      <Hero />
+      {!filtroGenero && !busqueda && <Hero />}
+      <HeroSecciones onSeccionClick={handleSeccionClick} />
 
       {pagoInfo && (
         <div className="pago-banner" onClick={() => setPagoInfo(null)}>
           {pagoInfo.tipo === 'exitoso'
             ? '✅ Pago aprobado. Gracias por tu compra.'
-            : '❌ El pago no pudo completarse. Intenta de nuevo.'}
+            : '❌ El pago no pudo completarse.'}
+        </div>
+      )}
+
+      {(filtroGenero || busqueda) && (
+        <div className="filtro-barra">
+          <span>
+            {filtroGenero && `Mostrando: ${filtroGenero === 'varon' ? '👨 Varón' : '👩 Mujer'}`}
+            {busqueda && ` Buscando: "${busqueda}"`}
+          </span>
+          <button className="btn-clear-filtro" onClick={() => { setFiltroGenero(null); setBusqueda('') }}>✕ Limpiar</button>
         </div>
       )}
 
       <section className="productos" id="productos">
-        <h2 className="section-title">Productos Destacados</h2>
+        <h2 className="section-title">
+          {filtroGenero === 'varon' ? 'Zapatillas de Hombre' :
+           filtroGenero === 'mujer' ? 'Zapatillas de Mujer' :
+           busqueda ? 'Resultados de búsqueda' :
+           'Productos Destacados'}
+        </h2>
         {cargandoProductos ? (
           <p style={{ textAlign: 'center', padding: '2rem' }}>Cargando productos...</p>
-        ) : productos.length === 0 ? (
+        ) : productosFiltrados.length === 0 ? (
           <p style={{ textAlign: 'center', padding: '2rem' }}>
-            No hay productos disponibles.
+            {busqueda ? 'No se encontraron productos con esa búsqueda.' : 'No hay productos disponibles.'}
           </p>
         ) : (
           <div className="productos-grid">
-            {productos.map(producto => (
+            {productosFiltrados.map(producto => (
               <ProductCard
                 key={producto.id}
                 producto={producto}
@@ -160,12 +214,12 @@ function AppContent() {
         <div className="modal-overlay" onClick={() => setVerPedidos(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
             <div className="modal-header">
-              <h2>Mis Pedidos</h2>
+              <h2>Mis Compras</h2>
               <button className="modal-cerrar" onClick={() => setVerPedidos(false)}>✕</button>
             </div>
             <div style={{ padding: '2rem' }}>
               {misPedidos.length === 0 ? (
-                <p style={{ color: '#666', textAlign: 'center' }}>No tienes pedidos aún</p>
+                <p style={{ color: '#666', textAlign: 'center' }}>No tienes compras aún</p>
               ) : (
                 misPedidos.map(p => (
                   <div key={p.id} style={{ padding: '1rem', border: '1px solid #eee', borderRadius: 8, marginBottom: '1rem' }}>
@@ -175,7 +229,14 @@ function AppContent() {
                     </div>
                     <p style={{ fontSize: '0.9rem', color: '#666' }}>{new Date(p.created_at).toLocaleDateString()}</p>
                     <p style={{ fontSize: '0.9rem' }}>Total: <strong>${Number(p.total).toFixed(2)}</strong></p>
-                    <p style={{ fontSize: '0.85rem', color: '#888' }}>Envío a: {p.direccion_envio}, {p.ciudad_envio}</p>
+                    <p style={{ fontSize: '0.85rem', color: '#888' }}>
+                      Envío a: {p.direccion_envio}, {p.ciudad_envio}
+                    </p>
+                    {p.estado === 'enviado' && (
+                      <p style={{ fontSize: '0.85rem', color: '#2563eb', marginTop: '0.25rem' }}>
+                        🚚 Número de seguimiento: PRADA-{String(p.id).padStart(6, '0')}
+                      </p>
+                    )}
                   </div>
                 ))
               )}
@@ -242,7 +303,9 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <AppContent />
+        <FavoritosProvider>
+          <AppContent />
+        </FavoritosProvider>
       </CartProvider>
     </AuthProvider>
   )

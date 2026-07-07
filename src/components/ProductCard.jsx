@@ -1,11 +1,17 @@
 import { useState } from 'react'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
+import { useFavoritos } from '../context/FavoritosContext'
 
 export default function ProductCard({ producto, tallas = [], imagenes = [] }) {
   const { agregarAlCarrito } = useCart()
+  const { user } = useAuth()
+  const { favoritos, toggleFavorito } = useFavoritos()
   const [tallaSel, setTallaSel] = useState('')
   const [mensaje, setMensaje] = useState('')
   const [imgIndex, setImgIndex] = useState(0)
+
+  const esFavorito = favoritos.includes(producto.id)
 
   const todasLasImagenes = [
     ...imagenes.map(i => i.url).filter(Boolean),
@@ -13,9 +19,7 @@ export default function ProductCard({ producto, tallas = [], imagenes = [] }) {
     `https://placehold.co/300x400/e2e8f0/64748b?text=${encodeURIComponent(producto.nombre)}`,
   ].filter(Boolean)
 
-  const primerIndex = 0
   const imagenActual = todasLasImagenes[imgIndex] || todasLasImagenes[0]
-
   const generoLabel = { varon: '👨', mujer: '👩', unisex: '👤' }
 
   const handleAgregar = () => {
@@ -35,8 +39,15 @@ export default function ProductCard({ producto, tallas = [], imagenes = [] }) {
     <div className="producto-card">
       <div className="producto-img-wrap">
         <img src={imagenActual} alt={producto.nombre} />
-        {producto.marca && (
-          <span className="producto-marca-badge">{producto.marca}</span>
+        {producto.marca && <span className="producto-marca-badge">{producto.marca}</span>}
+        {user && (
+          <button
+            className={`fav-btn ${esFavorito ? 'active' : ''}`}
+            onClick={(e) => { e.stopPropagation(); toggleFavorito(producto.id) }}
+            title={esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+          >
+            {esFavorito ? '❤️' : '🤍'}
+          </button>
         )}
         {todasLasImagenes.length > 1 && (
           <>
@@ -55,9 +66,7 @@ export default function ProductCard({ producto, tallas = [], imagenes = [] }) {
           <h3>{producto.nombre}</h3>
           <span className="producto-genero">{generoLabel[producto.genero] || '👤'}</span>
         </div>
-        {producto.marca && (
-          <p className="producto-marca">{producto.marca}</p>
-        )}
+        {producto.marca && <p className="producto-marca">{producto.marca}</p>}
         <p className="producto-precio">${Number(producto.precio).toFixed(2)}</p>
 
         {tallas.length > 0 && (
@@ -71,9 +80,7 @@ export default function ProductCard({ producto, tallas = [], imagenes = [] }) {
                   onClick={() => { setTallaSel(t.talla); setMensaje('') }}
                   disabled={t.stock <= 0}
                   title={t.stock <= 0 ? 'Agotado' : `Stock: ${t.stock}`}
-                >
-                  {t.talla}
-                </button>
+                >{t.talla}</button>
               ))}
             </div>
           </div>
@@ -82,17 +89,11 @@ export default function ProductCard({ producto, tallas = [], imagenes = [] }) {
         {mensaje && <p className="producto-mensaje">{mensaje}</p>}
 
         {totalStock > 0 && tallaSel ? (
-          <button className="btn-agregar" onClick={handleAgregar}>
-            Agregar al carrito
-          </button>
+          <button className="btn-agregar" onClick={handleAgregar}>Agregar al carrito</button>
         ) : totalStock <= 0 ? (
-          <button className="btn-agregar" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-            Agotado
-          </button>
+          <button className="btn-agregar" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>Agotado</button>
         ) : (
-          <button className="btn-agregar btn-agregar-disabled" onClick={handleAgregar}>
-            Agregar al carrito
-          </button>
+          <button className="btn-agregar btn-agregar-disabled" onClick={handleAgregar}>Agregar al carrito</button>
         )}
       </div>
     </div>

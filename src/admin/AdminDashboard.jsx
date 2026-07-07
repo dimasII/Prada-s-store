@@ -6,6 +6,10 @@ export default function AdminDashboard({ onCerrar }) {
   const [productos, setProductos] = useState([])
   const [marcas, setMarcas] = useState([])
   const [categorias, setCategorias] = useState([])
+  const [secciones, setSecciones] = useState([])
+  const [editandoSeccion, setEditandoSeccion] = useState(null)
+  const [seccionForm, setSeccionForm] = useState({ titulo: '', subtitulo: '', imagen_url: '', slug: '' })
+  const [subiendoSec, setSubiendoSec] = useState(false)
   const [editando, setEditando] = useState(null)
   const [form, setForm] = useState({
     nombre: '', descripcion: '', precio: '',
@@ -176,6 +180,41 @@ export default function AdminDashboard({ onCerrar }) {
     cargarMarcas()
   }
 
+  const cargarSecciones = async () => {
+    const { data } = await supabase.from('secciones').select('*').order('orden')
+    if (data) setSecciones(data)
+  }
+
+  const handleSeccionImagen = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setSubiendoSec(true)
+    const ext = file.name.split('.').pop()
+    const name = `secciones/${Date.now()}.${ext}`
+    await supabase.storage.from('productos').upload(name, file)
+    const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(name)
+    setSeccionForm(prev => ({ ...prev, imagen_url: publicUrl }))
+    setSubiendoSec(false)
+  }
+
+  const guardarSeccion = async (e) => {
+    e.preventDefault()
+    const payload = {
+      titulo: seccionForm.titulo,
+      subtitulo: seccionForm.subtitulo,
+      imagen_url: seccionForm.imagen_url || null,
+      slug: seccionForm.slug || seccionForm.titulo.toLowerCase().replace(/\s+/g, '-'),
+    }
+    if (editandoSeccion) {
+      await supabase.from('secciones').update(payload).eq('id', editandoSeccion)
+    } else {
+      await supabase.from('secciones').insert(payload)
+    }
+    setEditandoSeccion(null)
+    setSeccionForm({ titulo: '', subtitulo: '', imagen_url: '', slug: '' })
+    cargarSecciones()
+  }
+
   return (
     <div className="modal-overlay" onClick={onCerrar}>
       <div className="modal-content modal-admin" onClick={e => e.stopPropagation()}>
@@ -184,6 +223,7 @@ export default function AdminDashboard({ onCerrar }) {
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button className={`btn-tab ${vista === 'productos' ? 'active' : ''}`} onClick={() => setVista('productos')}>Productos</button>
             <button className={`btn-tab ${vista === 'marcas' ? 'active' : ''}`} onClick={() => setVista('marcas')}>Marcas</button>
+            <button className={`btn-tab ${vista === 'secciones' ? 'active' : ''}`} onClick={() => { setVista('secciones'); cargarSecciones() }}>Inicio</button>
             <button className="modal-cerrar" onClick={onCerrar}>✕</button>
           </div>
         </div>
@@ -201,6 +241,66 @@ export default function AdminDashboard({ onCerrar }) {
                 <span key={m.id} style={{ padding: '0.4rem 0.8rem', background: '#f0f0f0', borderRadius: 20, fontSize: '0.85rem' }}>
                   {m.nombre}
                 </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {vista === 'secciones' && (
+          <div style={{ padding: '2rem' }}>
+            <h3 style={{ marginBottom: '1rem' }}>Secciones de la página de inicio</h3>
+
+            <form onSubmit={guardarSeccion} style={{ marginBottom: '2rem', padding: '1rem', background: '#f9f9f9', borderRadius: 8 }}>
+              <h4>{editandoSeccion ? 'Editar sección' : 'Nueva sección'}</h4>
+              <div className="admin-form-grid" style={{ marginTop: '0.75rem' }}>
+                <input placeholder="Título (ej: Zapatillas de Hombre)" value={seccionForm.titulo}
+                  onChange={e => setSeccionForm({ ...seccionForm, titulo: e.target.value })} required
+                  style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: 6 }} />
+                <input placeholder="Subtítulo (opcional)" value={seccionForm.subtitulo}
+                  onChange={e => setSeccionForm({ ...seccionForm, subtitulo: e.target.value })}
+                  style={{ padding: '0.7rem', border: '1px solid #ddd', borderRadius: 6 }} />
+              </div>
+              <div style={{ marginTop: '0.75rem' }}>
+                <label className="admin-upload-label" style={{ fontSize: '0.85rem' }}>
+                  🖼️ Subir imagen de fondo
+                  <input type="file" accept="image/*" onChange={handleSeccionImagen} hidden />
+                </label>
+                {subiendoSec && <span style={{ marginLeft: '0.5rem', color: '#888' }}>Subiendo...</span>}
+                {seccionForm.imagen_url && (
+                  <img src={seccionForm.imagen_url} alt="" style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 6, marginLeft: '0.5rem' }} />
+                )}
+              </div>
+              <div className="admin-form-actions" style={{ marginTop: '0.75rem' }}>
+                <button type="submit" className="btn-primary">
+                  {editandoSeccion ? 'Guardar cambios' : 'Crear sección'}
+                </button>
+                {editandoSeccion && (
+                  <button type="button" className="btn-vaciar" onClick={() => { setEditandoSeccion(null); setSeccionForm({ titulo: '', subtitulo: '', imagen_url: '', slug: '' }) }}>
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            </form>
+
+            <div className="secciones-admin-grid">
+              {secciones.map(sec => (
+                <div key={sec.id} className="seccion-admin-card">
+                  <img src={sec.imagen_url || 'https://placehold.co/200x150/eee/999?text=Sin+imagen'} alt={sec.titulo} />
+                  <div className="seccion-admin-info">
+                    <strong>{sec.titulo}</strong>
+                    {sec.subtitulo && <small>{sec.subtitulo}</small>}
+                  </div>
+                  <div className="seccion-admin-acciones">
+                    <button className="btn-small" onClick={() => {
+                      setEditandoSeccion(sec.id)
+                      setSeccionForm({ titulo: sec.titulo, subtitulo: sec.subtitulo || '', imagen_url: sec.imagen_url || '', slug: sec.slug })
+                    }}>✏️</button>
+                    <button className="btn-small" onClick={async () => {
+                      await supabase.from('secciones').delete().eq('id', sec.id)
+                      cargarSecciones()
+                    }}>🗑️</button>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
