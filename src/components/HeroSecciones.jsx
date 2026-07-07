@@ -10,6 +10,7 @@ export default function HeroSecciones({ onSeccionClick }) {
   const [secciones, setSecciones] = useState([])
   const [cargando, setCargando] = useState(true)
   const [visible, setVisible] = useState(false)
+  const [errores, setErrores] = useState({})
   const ref = useRef(null)
 
   useEffect(() => {
@@ -39,7 +40,9 @@ export default function HeroSecciones({ onSeccionClick }) {
     <section className="banners-genero" ref={ref}>
       <div className="banners-container">
         {secciones.map((sec, i) => {
-          const img = sec.imagen_url || FALLBACKS[sec.slug] || FALLBACKS['zapatillas-hombre']
+          const img = errores[sec.id]
+            ? FALLBACKS[sec.slug] || FALLBACKS['zapatillas-hombre']
+            : sec.imagen_url || FALLBACKS[sec.slug] || FALLBACKS['zapatillas-hombre']
           return (
             <div
               key={sec.id}
@@ -47,7 +50,12 @@ export default function HeroSecciones({ onSeccionClick }) {
               onClick={() => onSeccionClick?.(sec.slug)}
             >
               <div className="banner-img-wrap">
-                <img src={img} alt={sec.titulo} loading="lazy" />
+                <img
+                  src={img}
+                  alt={sec.titulo}
+                  loading="lazy"
+                  onError={() => setErrores(prev => ({ ...prev, [sec.id]: true }))}
+                />
                 <div className="banner-overlay" />
                 <div className="banner-content">
                   <span className="banner-tag">
