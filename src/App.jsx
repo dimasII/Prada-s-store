@@ -18,6 +18,7 @@ function AppContent() {
   const { user, esAdmin, cargando } = useAuth()
   const [productos, setProductos] = useState([])
   const [tallas, setTallas] = useState({})
+  const [imagenes, setImagenes] = useState({})
   const [cargandoProductos, setCargandoProductos] = useState(true)
   const [verCarrito, setVerCarrito] = useState(false)
   const [verCheckout, setVerCheckout] = useState(false)
@@ -54,7 +55,7 @@ function AppContent() {
       .order('id', { ascending: false })
     if (data) {
       setProductos(data)
-      data.forEach(p => cargarTallas(p.id))
+      data.forEach(p => { cargarTallas(p.id); cargarImagenes(p.id) })
     }
     setCargandoProductos(false)
   }
@@ -67,6 +68,17 @@ function AppContent() {
       .order('talla')
     if (data) {
       setTallas(prev => ({ ...prev, [productoId]: data }))
+    }
+  }
+
+  const cargarImagenes = async (productoId) => {
+    const { data } = await supabase
+      .from('producto_imagenes')
+      .select('*')
+      .eq('producto_id', productoId)
+      .order('orden')
+    if (data) {
+      setImagenes(prev => ({ ...prev, [productoId]: data }))
     }
   }
 
@@ -121,6 +133,7 @@ function AppContent() {
                 key={producto.id}
                 producto={producto}
                 tallas={tallas[producto.id] || []}
+                imagenes={imagenes[producto.id] || []}
               />
             ))}
           </div>

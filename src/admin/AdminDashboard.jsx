@@ -8,9 +8,10 @@ export default function AdminDashboard({ onCerrar }) {
   const [categorias, setCategorias] = useState([])
   const [editando, setEditando] = useState(null)
   const [form, setForm] = useState({
-    nombre: '', descripcion: '', precio: '', imagen_url: '',
+    nombre: '', descripcion: '', precio: '',
     genero: 'unisex', marca_id: '', categoria_id: '',
   })
+  const [imagenesForm, setImagenesForm] = useState([])
   const [tallasForm, setTallasForm] = useState([])
   const [subiendo, setSubiendo] = useState(false)
   const [nuevaMarca, setNuevaMarca] = useState('')
@@ -41,38 +42,54 @@ export default function AdminDashboard({ onCerrar }) {
     if (data) setTallasForm(data)
   }
 
+  const cargarImagenes = async (productoId) => {
+    const { data } = await supabase.from('producto_imagenes').select('*').eq('producto_id', productoId).order('orden')
+    if (data) setImagenesForm(data)
+  }
+
   const handleEdit = async (producto) => {
     setEditando(producto.id)
     setForm({
       nombre: producto.nombre,
       descripcion: producto.descripcion || '',
       precio: producto.precio,
-      imagen_url: producto.imagen_url || '',
       genero: producto.genero || 'unisex',
       marca_id: producto.marca_id || '',
       categoria_id: producto.categoria_id || '',
     })
-    await cargarTallas(producto.id)
+    await Promise.all([
+      cargarTallas(producto.id),
+      cargarImagenes(producto.id),
+    ])
   }
 
   const handleNuevo = () => {
     setEditando('nuevo')
-    setForm({ nombre: '', descripcion: '', precio: '', imagen_url: '', genero: 'unisex', marca_id: '', categoria_id: '' })
+    setForm({ nombre: '', descripcion: '', precio: '', genero: 'unisex', marca_id: '', categoria_id: '' })
     setTallasForm([{ talla: '', stock: 0 }])
+    setImagenesForm([])
   }
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+    const files = e.target.files
+    if (!files.length) return
     setSubiendo(true)
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
-    const filePath = `productos/${fileName}`
-    const { error: uploadError } = await supabase.storage.from('productos').upload(filePath, file)
-    if (uploadError) { alert('Error al subir imagen: ' + uploadError.message); setSubiendo(false); return }
-    const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(filePath)
-    setForm(prev => ({ ...prev, imagen_url: publicUrl }))
+    const nuevasUrls = []
+    for (const file of files) {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+      const filePath = `productos/${fileName}`
+      const { error } = await supabase.storage.from('productos').upload(filePath, file)
+      if (error) { alert('Error al subir ' + file.name + ': ' + error.message); continue }
+      const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(filePath)
+      nuevasUrls.push(publicUrl)
+    }
+    setImagenesForm(prev => [...prev, ...nuevasUrls.map((url, i) => ({ url, orden: prev.length + i, id: `temp-${Date.now()}-${i}` }))])
     setSubiendo(false)
+  }
+
+  const eliminarImagenForm = (index) => {
+    setImagenesForm(prev => prev.filter((_, i) => i !== index))
   }
 
   const agregarTalla = () => {
@@ -95,7 +112,7 @@ export default function AdminDashboard({ onCerrar }) {
       nombre: form.nombre,
       descripcion: form.descripcion,
       precio: parseFloat(form.precio),
-      imagen_url: form.imagen_url || null,
+      imagen_url: (imagenesForm.length > 0 ? imagenesForm[0].url : null) || null,
       genero: form.genero,
       marca_id: form.marca_id ? parseInt(form.marca_id) : null,
       categoria_id: form.categoria_id ? parseInt(form.categoria_id) : null,
@@ -111,6 +128,13 @@ export default function AdminDashboard({ onCerrar }) {
           tallasValidas.map(t => ({ producto_id: prod.id, talla: t.talla, stock: parseInt(t.stock) || 0 }))
         )
       }
+
+      const imagenesValidas = imagenesForm.filter(img => img.url)
+      if (imagenesValidas.length > 0) {
+        await supabase.from('producto_imagenes').insert(
+          imagenesValidas.map((img, i) => ({ producto_id: prod.id, url: img.url, orden: i }))
+        )
+      }
     } else {
       const { error } = await supabase.from('productos').update(payload).eq('id', editando)
       if (error) { alert('Error: ' + error.message); return }
@@ -120,6 +144,14 @@ export default function AdminDashboard({ onCerrar }) {
       if (tallasValidas.length > 0) {
         await supabase.from('producto_tallas').insert(
           tallasValidas.map(t => ({ producto_id: editando, talla: t.talla, stock: parseInt(t.stock) || 0 }))
+        )
+      }
+
+      await supabase.from('producto_imagenes').delete().eq('producto_id', editando)
+      const imagenesValidas = imagenesForm.filter(img => img.url)
+      if (imagenesValidas.length > 0) {
+        await supabase.from('producto_imagenes').insert(
+          imagenesValidas.map((img, i) => ({ producto_id: editando, url: img.url, orden: i }))
         )
       }
     }
@@ -207,9 +239,22 @@ export default function AdminDashboard({ onCerrar }) {
                 </div>
 
                 <div className="admin-upload">
-                  <input type="file" accept="image/*" onChange={handleImageUpload} disabled={subiendo} />
-                  {subiendo && <span>Subiendo imagen...</span>}
-                  {form.imagen_url && <img src={form.imagen_url} alt="Preview" className="admin-preview" />}
+                  <label className="admin-upload-label">
+                    📸 Subir imágenes (puedes seleccionar varias)
+                    <input type="file" accept="image/*" multiple onChange={handleImageUpload} disabled={subiendo} hidden />
+                  </label>
+                  {subiendo && <p style={{ color: '#888', fontSize: '0.85rem' }}>Subiendo imágenes...</p>}
+                  {imagenesForm.length > 0 && (
+                    <div className="admin-imagenes-grid">
+                      {imagenesForm.map((img, i) => (
+                        <div key={img.id || i} className="admin-imagen-item">
+                          <img src={img.url} alt={`Foto ${i + 1}`} />
+                          <button type="button" className="admin-img-delete" onClick={() => eliminarImagenForm(i)}>✕</button>
+                          {i === 0 && <span className="admin-img-main">Principal</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="admin-tallas">

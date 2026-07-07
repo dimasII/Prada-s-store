@@ -1,14 +1,20 @@
 import { useState } from 'react'
 import { useCart } from '../context/CartContext'
 
-export default function ProductCard({ producto, tallas = [] }) {
+export default function ProductCard({ producto, tallas = [], imagenes = [] }) {
   const { agregarAlCarrito } = useCart()
   const [tallaSel, setTallaSel] = useState('')
   const [mensaje, setMensaje] = useState('')
+  const [imgIndex, setImgIndex] = useState(0)
 
-  const imagenSrc = producto.imagen_url
-    ? producto.imagen_url
-    : `https://placehold.co/300x400/e2e8f0/64748b?text=${encodeURIComponent(producto.nombre)}`
+  const todasLasImagenes = [
+    ...imagenes.map(i => i.url).filter(Boolean),
+    producto.imagen_url,
+    `https://placehold.co/300x400/e2e8f0/64748b?text=${encodeURIComponent(producto.nombre)}`,
+  ].filter(Boolean)
+
+  const primerIndex = 0
+  const imagenActual = todasLasImagenes[imgIndex] || todasLasImagenes[0]
 
   const generoLabel = { varon: '👨', mujer: '👩', unisex: '👤' }
 
@@ -23,16 +29,25 @@ export default function ProductCard({ producto, tallas = [] }) {
     setTimeout(() => setMensaje(''), 2000)
   }
 
-  const tallaSelData = tallas.find(t => t.talla === tallaSel)
-  const stockDisponible = tallaSelData ? tallaSelData.stock : 0
   const totalStock = tallas.reduce((s, t) => s + t.stock, 0)
 
   return (
     <div className="producto-card">
       <div className="producto-img-wrap">
-        <img src={imagenSrc} alt={producto.nombre} />
+        <img src={imagenActual} alt={producto.nombre} />
         {producto.marca && (
           <span className="producto-marca-badge">{producto.marca}</span>
+        )}
+        {todasLasImagenes.length > 1 && (
+          <>
+            <button className="img-nav img-prev" onClick={(e) => { e.stopPropagation(); setImgIndex(i => (i - 1 + todasLasImagenes.length) % todasLasImagenes.length) }}>‹</button>
+            <button className="img-nav img-next" onClick={(e) => { e.stopPropagation(); setImgIndex(i => (i + 1) % todasLasImagenes.length) }}>›</button>
+            <div className="img-dots">
+              {todasLasImagenes.map((_, i) => (
+                <span key={i} className={`img-dot ${i === imgIndex ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setImgIndex(i) }} />
+              ))}
+            </div>
+          </>
         )}
       </div>
       <div className="producto-info">

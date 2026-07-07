@@ -56,7 +56,16 @@ CREATE TABLE clientes (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. TABLA DE PEDIDOS
+-- 6. TABLA DE IMÁGENES DE PRODUCTOS (múltiples por producto)
+CREATE TABLE producto_imagenes (
+  id BIGSERIAL PRIMARY KEY,
+  producto_id BIGINT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  orden INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. TABLA DE PEDIDOS
 CREATE TABLE pedidos (
   id BIGSERIAL PRIMARY KEY,
   cliente_id BIGINT REFERENCES clientes(id) ON DELETE SET NULL,
@@ -105,6 +114,7 @@ CREATE INDEX idx_productos_categoria ON productos(categoria_id);
 CREATE INDEX idx_productos_genero ON productos(genero);
 CREATE INDEX idx_productos_activo ON productos(activo);
 CREATE INDEX idx_producto_tallas_producto ON producto_tallas(producto_id);
+CREATE INDEX idx_producto_imagenes_producto ON producto_imagenes(producto_id);
 CREATE INDEX idx_pedidos_cliente ON pedidos(cliente_id);
 CREATE INDEX idx_pedidos_estado ON pedidos(estado);
 CREATE INDEX idx_pagos_pedido ON pagos(pedido_id);
@@ -127,6 +137,7 @@ ALTER TABLE marcas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categorias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE productos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE producto_tallas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE producto_imagenes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pedidos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pedido_items ENABLE ROW LEVEL SECURITY;
@@ -157,6 +168,11 @@ CREATE POLICY "Tallas SELECT publico" ON producto_tallas FOR SELECT USING (true)
 CREATE POLICY "Tallas INSERT admin" ON producto_tallas FOR INSERT WITH CHECK (es_admin());
 CREATE POLICY "Tallas UPDATE admin" ON producto_tallas FOR UPDATE USING (es_admin());
 CREATE POLICY "Tallas DELETE admin" ON producto_tallas FOR DELETE USING (es_admin());
+
+-- IMÁGENES: todos ven, solo admins modifican
+CREATE POLICY "Imagenes SELECT publico" ON producto_imagenes FOR SELECT USING (true);
+CREATE POLICY "Imagenes INSERT admin" ON producto_imagenes FOR INSERT WITH CHECK (es_admin());
+CREATE POLICY "Imagenes DELETE admin" ON producto_imagenes FOR DELETE USING (es_admin());
 
 -- CLIENTES: cada quien ve su propio perfil, admins ven todo
 CREATE POLICY "Clientes SELECT propio" ON clientes FOR SELECT USING (auth.uid() = user_id);
