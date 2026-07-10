@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 const FALLBACKS = {
@@ -6,29 +6,24 @@ const FALLBACKS = {
   'zapatillas-mujer': 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&q=80',
 }
 
+const FALLBACK_DEFAULT = 'https://placehold.co/800x600/1a1a2e/ffffff?text=Colección'
+
 export default function HeroSecciones({ onSeccionClick }) {
   const [secciones, setSecciones] = useState([])
   const [cargando, setCargando] = useState(true)
-  const [visible, setVisible] = useState(false)
   const [errores, setErrores] = useState({})
-  const ref = useRef(null)
 
   useEffect(() => {
     cargarSecciones()
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true) },
-      { threshold: 0.1 }
-    )
-    if (ref.current) observer.observe(ref.current)
-    return () => observer.disconnect()
   }, [])
 
   const cargarSecciones = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('secciones')
       .select('*')
       .eq('activo', true)
       .order('orden')
+    if (error) console.error('Error cargando secciones:', error)
     if (data) setSecciones(data)
     setCargando(false)
   }
@@ -37,16 +32,16 @@ export default function HeroSecciones({ onSeccionClick }) {
   if (secciones.length === 0) return null
 
   return (
-    <section className="banners-genero" ref={ref}>
+    <section className="banners-genero">
       <div className="banners-container">
         {secciones.map((sec, i) => {
           const img = errores[sec.id]
-            ? FALLBACKS[sec.slug] || FALLBACKS['zapatillas-hombre']
-            : sec.imagen_url || FALLBACKS[sec.slug] || FALLBACKS['zapatillas-hombre']
+            ? FALLBACKS[sec.slug] || FALLBACK_DEFAULT
+            : sec.imagen_url || FALLBACKS[sec.slug] || FALLBACK_DEFAULT
           return (
             <div
               key={sec.id}
-              className={`banner-card ${visible ? `banner-enter banner-enter-${i}` : ''}`}
+              className={`banner-card banner-enter banner-enter-${i}`}
               onClick={() => onSeccionClick?.(sec.slug)}
             >
               <div className="banner-img-wrap">
